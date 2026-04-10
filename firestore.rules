@@ -1,0 +1,100 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function userExists() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function isActive() {
+      let data = getUserData();
+      return data.status != 'inactive'; // Default to active if field missing
+    }
+
+    function isRole(role) {
+      return isAuthenticated() && userExists() && getUserData().role == role;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isIncidentReporter(incidentData) {
+      return isAuthenticated() && request.auth.uid == incidentData.reporter_id;
+    }
+
+    function isAssignedResponder(incidentData) {
+      return isRole('Responder') && incidentData.assigned_agency_id == getUserData().agency_id;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    // Users Collection
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) || isRole('Admin');
+    }
+
+    // Agencies Collection
+    match /agencies/{agencyId} {
+      allow read: if isAuthenticated() && userExists() && isActive();
+      allow write: if isRole('Admin');
+    }
+
+    // Incidents Collection
+    match /incidents/{incidentId} {
+      allow read: if isAuthenticated() && userExists() && isActive() && (
+        isRole('Admin') || 
+        isAssignedResponder(resource.data) || 
+        isIncidentReporter(resource.data)
+      );
+      allow create: if isAuthenticated() && userExists() && isActive();
+      allow update: if isAuthenticated() && userExists() && isActive() && (
+        isRole('Admin') || 
+        (isAssignedResponder(resource.data) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updated_at'])) || 
+        (isIncidentReporter(resource.data) && resource.data.status == 'New')
+      );
+    }
+
+    // Incident Updates
+    match /incidentUpdates/{updateId} {
+      allow read: if isAuthenticated() && userExists() && isActive();
+      allow create: if isAuthenticated() && userExists() && isActive() && (
+        isRole('Admin') || 
+        isAssignedResponder(get(/databases/$(database)/documents/incidents/$(request.resource.data.incident_id)).data) ||
+        isIncidentReporter(get(/databases/$(database)/documents/incidents/$(request.resource.data.incident_id)).data)
+      );
+    }
+
+    // Content Modules & Lessons
+    match /contentModules/{moduleId} {
+      allow read: if isAuthenticated() && userExists() && isActive();
+      allow write: if isRole('Admin');
+    }
+    
+    match /lessons/{lessonId} {
+      allow read: if isAuthenticated() && userExists() && isActive();
+      allow write: if isRole('Admin');
+    }
+
+    // User Progress
+    match /userLessonProgress/{progressId} {
+      allow read: if isAuthenticated() && userExists() && isActive() && (request.auth.uid == resource.data.user_id || isRole('Admin'));
+      allow write: if isAuthenticated() && userExists() && isActive() && (request.auth.uid == request.resource.data.user_id || isRole('Admin'));
+    }
+  }
+}

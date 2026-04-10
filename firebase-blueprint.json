@@ -1,0 +1,60 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and role information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "full_name": { "type": "string" },
+        "phone_number": { "type": "string" },
+        "role": { "type": "string", "enum": ["Citizen", "Responder", "Admin"] },
+        "state": { "type": "string" },
+        "lga": { "type": "string" },
+        "language": { "type": "string" },
+        "agency_id": { "type": "string" }
+      },
+      "required": ["uid", "role"]
+    },
+    "Agency": {
+      "title": "Agency",
+      "description": "Emergency response agency",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["SEMA", "Fire", "NSCDC", "Police", "FRSC", "Hospital", "NEMA", "NEMSAS"] },
+        "state": { "type": "string" },
+        "primary_phone": { "type": "string" },
+        "secondary_phone": { "type": "string" },
+        "description": { "type": "string" }
+      },
+      "required": ["name", "type", "state"]
+    },
+    "Incident": {
+      "title": "Incident",
+      "description": "Reported emergency incident",
+      "type": "object",
+      "properties": {
+        "reporter_id": { "type": "string" },
+        "incident_type": { "type": "string" },
+        "description": { "type": "string" },
+        "state": { "type": "string" },
+        "lga": { "type": "string" },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" },
+        "photo_url": { "type": "string" },
+        "audio_url": { "type": "string" },
+        "status": { "type": "string", "enum": ["New", "Acknowledged", "En route", "Resolved", "Closed"] },
+        "assigned_agency_id": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["reporter_id", "incident_type", "state", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": { "schema": "User", "description": "User profiles" },
+    "/agencies/{agencyId}": { "schema": "Agency", "description": "Emergency agencies" },
+    "/incidents/{incidentId}": { "schema": "Incident", "description": "Incident reports" }
+  }
+}

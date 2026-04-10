@@ -1,0 +1,5 @@
+{
+  "name": "Naija Safety Hub",
+  "description": "A multi-hazard citizen safety and emergency app for Nigeria, featuring real-time incident reporting, learning hub, and agency directory for Citizens, Responders, and Admins.",
+  "requestFramePermissions": ["geolocation"]
+}
